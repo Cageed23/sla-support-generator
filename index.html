@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>SLA Support Generator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+    />
+  </head>
+  <body>
+    <div class="app" id="app">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <span class="brand-name">SLA Support Generator</span>
+          <span class="brand-stage">Etappe 1 · Import &amp; Ansicht</span>
+        </div>
+        <div class="topbar-actions">
+          <button id="btn-open" class="btn btn-primary" type="button" title="Dateien öffnen (Strg+O)">Modell öffnen</button>
+          <button id="btn-sample" class="btn" type="button">Beispiel laden</button>
+          <span class="divider" aria-hidden="true"></span>
+          <button id="btn-export-stl" class="btn" type="button" disabled>Export STL</button>
+          <button id="btn-export-3mf" class="btn" type="button" disabled>Export 3MF</button>
+        </div>
+        <input id="file-input" type="file" multiple hidden />
+      </header>
+
+      <aside class="panel" id="panel">
+        <section class="group">
+          <h2 class="group-title">Drucker</h2>
+          <div class="field-row three">
+            <label class="field"><span>Breite X</span><input id="vol-x" type="number" min="10" max="2000" step="0.1" /><em>mm</em></label>
+            <label class="field"><span>Tiefe Y</span><input id="vol-y" type="number" min="10" max="2000" step="0.1" /><em>mm</em></label>
+            <label class="field"><span>Höhe Z</span><input id="vol-z" type="number" min="10" max="2000" step="0.1" /><em>mm</em></label>
+          </div>
+          <p class="hint">Bauvolumen deines Druckers. Bei SLA hängt das Modell kopfüber an der Plattform; hier wird es aufrecht auf der Platte gezeigt.</p>
+        </section>
+
+        <section class="group">
+          <div class="group-head">
+            <h2 class="group-title">Modelle <span id="model-count" class="count">0</span></h2>
+            <button id="btn-arrange" class="btn btn-small" type="button" disabled>Anordnen</button>
+          </div>
+          <ul id="model-list" class="model-list"></ul>
+          <p id="model-empty" class="hint">Noch kein Modell geladen. Ziehe eine Datei in die Ansicht oder klicke auf „Modell öffnen“.</p>
+        </section>
+
+        <section class="group" id="selection" hidden>
+          <h2 class="group-title">Ausgewählt: <span id="sel-name" class="sel-name"></span></h2>
+
+          <div class="subgroup">
+            <h3>Position</h3>
+            <div class="field-row three">
+              <label class="field"><span>X</span><input id="pos-x" type="number" step="0.5" /><em>mm</em></label>
+              <label class="field"><span>Y</span><input id="pos-y" type="number" step="0.5" /><em>mm</em></label>
+              <label class="field"><span>Z</span><input id="pos-z" type="number" step="0.5" readonly title="Wird beim Ablegen auf die Platte gesetzt" /><em>mm</em></label>
+            </div>
+          </div>
+
+          <div class="subgroup">
+            <h3>Drehung</h3>
+            <div class="field-row three">
+              <label class="field"><span>X</span><input id="rot-x" type="number" step="5" /><em>°</em></label>
+              <label class="field"><span>Y</span><input id="rot-y" type="number" step="5" /><em>°</em></label>
+              <label class="field"><span>Z</span><input id="rot-z" type="number" step="5" /><em>°</em></label>
+            </div>
+          </div>
+
+          <div class="subgroup">
+            <div class="subgroup-head">
+              <h3>Skalierung</h3>
+              <label class="check"><input id="scale-lock" type="checkbox" checked /> proportional</label>
+            </div>
+            <div class="field-row three">
+              <label class="field"><span>X</span><input id="scl-x" type="number" step="1" min="0.1" /><em>%</em></label>
+              <label class="field"><span>Y</span><input id="scl-y" type="number" step="1" min="0.1" /><em>%</em></label>
+              <label class="field"><span>Z</span><input id="scl-z" type="number" step="1" min="0.1" /><em>%</em></label>
+            </div>
+            <div class="chips" role="group" aria-label="Einheit korrigieren">
+              <span class="chips-label">Einheit:</span>
+              <button class="chip" type="button" data-unit="10" title="Modell war in Zentimetern">cm → mm</button>
+              <button class="chip" type="button" data-unit="25.4" title="Modell war in Zoll">Zoll → mm</button>
+              <button class="chip" type="button" data-unit="1000" title="Modell war in Metern">m → mm</button>
+              <button class="chip" type="button" data-unit="0.1" title="Modell ist 10× zu groß">÷ 10</button>
+              <button class="chip" type="button" id="btn-fit" title="Proportional so skalieren, dass es ins Bauvolumen passt">Einpassen</button>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button id="btn-drop" class="btn btn-small" type="button">Auf Platte legen</button>
+            <button id="btn-center" class="btn btn-small" type="button">Zentrieren</button>
+            <button id="btn-reset" class="btn btn-small" type="button">Zurücksetzen</button>
+            <button id="btn-dup" class="btn btn-small" type="button" title="Strg+D">Duplizieren</button>
+            <button id="btn-delete" class="btn btn-small btn-danger" type="button" title="Entf">Löschen</button>
+          </div>
+
+          <dl class="stats">
+            <div><dt>Größe</dt><dd id="st-size">–</dd></div>
+            <div><dt>Harz</dt><dd id="st-volume">–</dd></div>
+            <div><dt>Dreiecke</dt><dd id="st-tris">–</dd></div>
+            <div><dt>Format</dt><dd id="st-format">–</dd></div>
+          </dl>
+          <p id="st-outside" class="warning" hidden>Das Modell ragt über das Bauvolumen hinaus.</p>
+        </section>
+
+        <section class="group upcoming">
+          <h2 class="group-title">Supports</h2>
+          <p class="hint">Automatische Supports, Auto-Ausrichtung, Baum-Supports und Aushöhlen folgen in den nächsten Etappen.</p>
+        </section>
+      </aside>
+
+      <main class="stage" id="stage">
+        <div class="viewport" id="viewport"></div>
+
+        <div class="tools tools-left" role="toolbar" aria-label="Werkzeug">
+          <button class="tool is-active" type="button" data-mode="translate" title="Verschieben (T)">Verschieben <kbd>T</kbd></button>
+          <button class="tool" type="button" data-mode="rotate" title="Drehen (R)">Drehen <kbd>R</kbd></button>
+          <button class="tool" type="button" data-mode="scale" title="Skalieren (S)">Skalieren <kbd>S</kbd></button>
+        </div>
+
+        <div class="tools tools-right" role="toolbar" aria-label="Ansicht">
+          <button class="tool" type="button" data-view="iso">Iso</button>
+          <button class="tool" type="button" data-view="front">Vorne</button>
+          <button class="tool" type="button" data-view="side">Seite</button>
+          <button class="tool" type="button" data-view="top">Oben</button>
+          <button class="tool" type="button" data-view="bottom">Unten</button>
+          <button class="tool" type="button" data-view="fit" title="Auf Auswahl zoomen (F)">Zoom <kbd>F</kbd></button>
+        </div>
+
+        <div class="statusbar" id="statusbar" aria-live="polite"></div>
+        <div class="drop-overlay" id="drop-overlay" hidden><div>Datei hier ablegen</div></div>
+        <div class="busy" id="busy" hidden><div class="busy-card"><span class="spinner" aria-hidden="true"></span><span id="busy-text">Lade…</span></div></div>
+      </main>
+    </div>
+    <div class="toasts" id="toasts" aria-live="polite"></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
